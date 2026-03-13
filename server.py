@@ -217,6 +217,82 @@ def create_expense():
     }), 201
 
 
+
+# ------ Expenses Functions ------
+def get_expenses_from_db():
+    conn = sqlite3.connect(DB_NAME)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM expenses")
+    rows = cursor.fetchall()
+
+    rows_records = [dict(row) for row in rows]
+    
+    conn.close()
+    return rows_records
+
+
+def get_expense_by_id_from_db(expense_id):
+    conn = sqlite3.connect(DB_NAME)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM expenses WHERE id=?", (expense_id,))
+    row = cursor.fetchone()
+    conn.close()
+    return dict(row)
+
+
+def update_expense_by_id_from_db(expense_id, expense_data):
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+
+    title = expense_data["title"]
+    description = expense_data["description"]
+    amount = expense_data["amount"]
+    date = expense_data["date"]
+    category = expense_data["category"]
+    user_id = expense_data["user_id"]
+
+    cursor.execute("UPDATE expenses SET title=?, description=?, amount=?, date=?, category=?, user_id=? WHERE id=?",
+                   (title, description, amount, date, category, user_id, expense_id))
+    conn.commit()
+    conn.close()
+
+
+# ------ Expenses Endpoints ---------
+# GET all the expenses
+@app.get('/api/expenses')
+def get_expenses():
+    expenses = get_expenses_from_db()
+
+    return jsonify({
+        "success": True,
+        "message": "Expenses retrieved successfully",
+        "data": expenses  
+    }), 200
+
+
+@app.get('/api/expenses/<int:expense_id>')
+def get_expense_by_id(expense_id):
+    expense = get_expense_by_id_from_db(expense_id)
+    return jsonify({
+        "success": True,
+        "message": "Expense retrieved successfully",
+        "data": expense
+    }), 200
+
+
+@app.put('/api/expenses/<int:expense_id>')
+def update_expense(expense_id):
+    updated_expense = request.get_json()
+    update_expense_by_id_from_db(expense_id, updated_expense)
+    return jsonify({
+        "success": True,
+        "message": "Expense updated successfully"
+    }), 200
+
+
+
 if __name__ == "__main__":
     init_db()
     app.run(debug=True)
